@@ -1,3 +1,110 @@
+# Backend — E-HospitalBD
+
+This document describes how to run the backend API locally and includes example requests for the patient register/login endpoints.
+
+Prerequisites
+- Node.js (18+ recommended)
+- npm
+- PostgreSQL (or provide a `DATABASE_URL` pointing to your DB)
+
+Quick start
+
+1. Install dependencies
+
+```bash
+cd backend
+npm install
+```
+
+2. Set environment variables (example)
+
+```bash
+export DATABASE_URL="postgres://postgres:postgres@127.0.0.1:5432/postgres"
+export JWT_SECRET="a_long_random_secret"
+```
+
+3. Run in development
+
+```bash
+npm run start:dev
+```
+
+Or build and run production
+
+```bash
+npm run build
+npm run start:prod
+```
+
+Notes
+- The project defaults to `DATABASE_URL` shown above if not provided.
+- `JWT_SECRET` defaults to `change_me` in code; set a secure value for production.
+- TypeORM is configured with `synchronize: true` for convenience — disable in production.
+
+API examples
+
+Register a patient
+
+```bash
+curl -X POST http://localhost:3000/patient/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test User",
+    "email": "test@example.com",
+    "phoneNo": "+8801XXXXXXXXX",
+    "location": { "district": "Dhaka", "division": "Dhaka" },
+    "dateOfBirth": "1990-01-01",
+    "password": "secret"
+  }'
+```
+
+Successful response example
+
+```json
+{
+  "message": "Patient registered successfully",
+  "patient": {
+    "id": "...",
+    "name": "Test User",
+    "email": "test@example.com",
+    "phoneNo": "+8801XXXXXXXXX",
+    "location": { "district": "Dhaka", "division": "Dhaka" },
+    "dateOfBirth": "1990-01-01",
+    "createdAt": "2026-08-11T..."
+  }
+}
+```
+
+Login (phone + password)
+
+```bash
+curl -X POST http://localhost:3000/patient/login \
+  -H "Content-Type: application/json" \
+  -d '{ "phoneNo": "+8801XXXXXXXXX", "password": "secret" }'
+```
+
+Successful login example
+
+```json
+{
+  "message": "Login successful",
+  "token": "<JWT_TOKEN>",
+  "patient": { /* patient object */ }
+}
+```
+
+Using the token for protected endpoints
+
+```bash
+TOKEN="<JWT_TOKEN>"
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/patient
+```
+
+Helpful tips
+- If you add or change entities, restart the server when running with `start:dev`.
+- For production, set `synchronize: false` and use migrations.
+
+If you want, I can also add a Postman collection or protect specific routes with the JWT guard.
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
