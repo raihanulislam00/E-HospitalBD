@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PatientModule } from './patient/patient.module';
+import { AuthModule } from './auth/auth.module';
 
 const databaseUrl = process.env.DATABASE_URL ?? 'postgres://postgres:postgres@127.0.0.1:5432/postgres';
 
@@ -15,6 +16,7 @@ const databaseUrl = process.env.DATABASE_URL ?? 'postgres://postgres:postgres@12
       synchronize: true,
     }),
     PatientModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],

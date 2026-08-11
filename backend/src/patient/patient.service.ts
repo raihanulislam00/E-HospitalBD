@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { randomBytes, scryptSync } from 'crypto';
 import { Repository } from 'typeorm';
 import { CreatePatientDto } from './dto/create-patient.dto';
+import { LoginPatientDto } from './dto/login-patient.dto';
 import { Patient } from './entities/patient.entity';
 
 @Injectable()
@@ -54,12 +55,30 @@ export class PatientService {
 		return this.toResponse(savedPatient);
 	}
 
+	async login(loginDto: LoginPatientDto) {
+		const phoneNo = this.requireString(loginDto.phoneNo, 'phoneNo');
+		const password = this.requireString(loginDto.password, 'password');
+
+		const patient = await this.patientRepository.findOne({ where: { phoneNo } });
+
+		if (!patient) {
+			throw new BadRequestException('invalid phone number or password');
+		}
+
+		const derived = scryptSync(password, patient.passwordSalt, 64).toString('hex');
+		if (derived !== patient.passwordHash) {
+			throw new BadRequestException('invalid phone number or password');
+		}
+
+		return patient;
+	}
+
 	async list() {
 		const patients = await this.patientRepository.find({ order: { createdAt: 'DESC' } });
 		return patients.map((patient) => this.toResponse(patient));
 	}
 
-	private toResponse(patient: Patient) {
+	public toResponse(patient: Patient) {
 		return {
 			id: patient.id,
 			name: patient.name,
