@@ -89,7 +89,28 @@ Successful login example
 {
   "message": "Login successful",
   "token": "<JWT_TOKEN>",
+  "dashboardUrl": "/patient/dashboard",
   "patient": { /* patient object */ }
+}
+```
+
+Patient dashboard API
+
+```bash
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/patient/dashboard
+```
+
+Successful dashboard example
+
+```json
+{
+  "message": "Patient dashboard",
+  "patient": { /* patient object */ },
+  "dashboard": {
+    "route": "/patient/dashboard",
+    "authentication": "Bearer token required",
+    "nextStep": "Use the token from /patient/login in the Authorization header"
+  }
 }
 ```
 
