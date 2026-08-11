@@ -1,13 +1,23 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+const sessionStorageKey = "ehospitalbd-chat-session";
 
 type ChatMessage = {
   id: number;
   role: "assistant" | "user";
   text: string;
   time: string;
+};
+
+type ChatApiResponse = {
+  sessionId: string;
+  reply: string;
+  history: Array<{ role: "assistant" | "user"; content: string }>;
+  disclaimer: string;
 };
 
 const sidebarItems = [
@@ -24,38 +34,13 @@ const sidebarItems = [
   { label: "Emergency Help", href: "#", icon: "📞", danger: true },
 ];
 
-const quickReplies = [
-  "I have a fever",
-  "Severe headache",
-  "Stomach pain",
-  "Cold & Cough",
-  "View my bookings",
-];
-
-const initialMessages: ChatMessage[] = [
-  {
-    id: 1,
-    role: "assistant",
-    text: "Hello Rahman! 👋\n\nI&apos;m your AI health assistant. You can describe your symptoms in your own words, and I&apos;ll help you with preliminary guidance and recommend the right specialist if needed.\n\nHow can I help you with your health today?",
-    time: "10:30 AM",
-  },
-  {
-    id: 2,
-    role: "user",
-    text: "I have had a high fever since yesterday and a severe headache.",
-    time: "10:32 AM",
-  },
-  {
-    id: 3,
-    role: "assistant",
-    text: "Thanks for sharing that. I&apos;d like to ask you a few questions to better understand your condition.",
-    time: "10:32 AM",
-  },
-];
+const initialMessages: ChatMessage[] = [];
 
 export default function ChatWithAIPage() {
   const [messages, setMessages] = useState<ChatMessage[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [isSending, setIsSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [patient] = useState<{ name: string; role: string }>(() => {
     if (typeof window === "undefined") return { name: "Rahman Ahmed", role: "Patient" };
 
@@ -69,27 +54,117 @@ export default function ChatWithAIPage() {
       return { name: "Rahman Ahmed", role: "Patient" };
     }
   });
+  const [sessionId, setSessionId] = useState(() => {
+    if (typeof window === "undefined") return "default";
 
-  const sendMessage = (text?: string) => {
+    const storedSessionId = localStorage.getItem(sessionStorageKey);
+    if (storedSessionId) return storedSessionId;
+
+    const generatedSessionId =
+      globalThis.crypto?.randomUUID?.() ?? `chat-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    localStorage.setItem(sessionStorageKey, generatedSessionId);
+    return generatedSessionId;
+  });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    localStorage.setItem(sessionStorageKey, sessionId);
+  }, [sessionId]);
+
+  const clearChat = async () => {
+    setMessages(initialMessages);
+    setInput("");
+    setError(null);
+
+    try {
+      await fetch(`${backendUrl}/patient/chat/clear`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ sessionId }),
+      });
+    } catch {
+      // Keep the UI reset even if the backend clear request fails.
+    }
+  };
+
+  const sendMessage = async (text?: string) => {
     const content = (text ?? input).trim();
     if (!content) return;
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: current.length + 1,
-        role: "user",
-        text: content,
-        time: "10:33 AM",
-      },
-      {
-        id: current.length + 2,
-        role: "assistant",
-        text: "Based on your symptoms, you may need consultation with a specialist. If symptoms worsen or become severe, please seek immediate medical care.",
-        time: "10:33 AM",
-      },
-    ]);
+    setIsSending(true);
+    setError(null);
+
+    const userMessage: ChatMessage = {
+      id: Date.now(),
+      role: "user",
+      text: content,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+
+    const nextMessages = [...messages, userMessage];
+    setMessages(nextMessages);
     setInput("");
+
+    try {
+      const response = await fetch(`${backendUrl}/patient/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sessionId,
+          message: content,
+          history: messages.map((message) => ({
+            role: message.role,
+            content: message.text,
+          })),
+        }),
+      });
+
+      const payload = (await response.json()) as ChatApiResponse | { message?: string };
+
+      if (!response.ok) {
+        throw new Error(payload?.message ?? "Unable to get AI response");
+      }
+
+      const aiPayload = payload as ChatApiResponse;
+      setSessionId(aiPayload.sessionId);
+
+      setMessages((current) => [
+        ...current,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          text: aiPayload.reply,
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Unable to get AI response");
+      setMessages((current) => [
+        ...current,
+        {
+          id: Date.now() + 1,
+          role: "assistant",
+          text: "Sorry — I couldn&apos;t reach the AI service right now. Please try again in a moment.",
+          time: new Date().toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        },
+      ]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -206,10 +281,7 @@ export default function ChatWithAIPage() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setMessages(initialMessages);
-                  setInput("");
-                }}
+                onClick={() => void clearChat()}
                 className="hidden items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm md:inline-flex"
               >
                 <span>🗑</span>
@@ -269,11 +341,14 @@ export default function ChatWithAIPage() {
                 </div>
 
                 <div className="mt-2 flex flex-col gap-3 rounded-[2rem] border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
-                  <input
+                    <input
                     value={input}
                     onChange={(event) => setInput(event.target.value)}
                     onKeyDown={(event) => {
-                      if (event.key === "Enter") sendMessage();
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        void sendMessage();
+                      }
                     }}
                     placeholder="Type your symptoms here..."
                     className="w-full border-none bg-transparent px-3 py-3 text-sm outline-none placeholder:text-slate-400"
@@ -288,26 +363,20 @@ export default function ChatWithAIPage() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => sendMessage()}
-                      className="grid h-11 w-11 place-items-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200"
+                      onClick={() => void sendMessage()}
+                      disabled={isSending}
+                      className="grid h-11 w-11 place-items-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-200 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      ➜
+                      {isSending ? "…" : "➜"}
                     </button>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap gap-3">
-                  {quickReplies.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      onClick={() => sendMessage(item)}
-                      className="rounded-full border border-slate-200 bg-[#f8fbff] px-4 py-2 text-sm text-slate-700 transition hover:border-blue-200 hover:text-blue-700"
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
+                {error ? (
+                  <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                    {error}
+                  </div>
+                ) : null}
 
                 <div className="flex items-start gap-3 rounded-[1.5rem] border border-slate-100 bg-[#fbfcff] p-4 text-sm text-slate-500">
                   <span className="grid h-8 w-8 place-items-center rounded-full bg-white shadow-sm">🛡</span>
