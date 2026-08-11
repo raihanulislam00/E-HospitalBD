@@ -4,12 +4,15 @@ import { LoginPatientDto } from './dto/login-patient.dto';
 import { PatientService } from './patient.service';
 import { AuthService } from '../auth/auth.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { AiChatService } from './ai-chat.service';
+import type { ChatRequestDto } from './dto/chat-message.dto';
 
 @Controller('patient')
 export class PatientController {
 	constructor(
 		private readonly patientService: PatientService,
 		private readonly authService: AuthService,
+		private readonly aiChatService: AiChatService,
 	) {}
 
 	@Post('register')
@@ -50,5 +53,15 @@ export class PatientController {
 	@Get()
 	async list() {
 		return this.patientService.list();
+	}
+
+	@Post('chat')
+	async chat(@Body() chatRequestDto: ChatRequestDto) {
+		return this.aiChatService.reply(chatRequestDto);
+	}
+
+	@Post('chat/clear')
+	clearChat(@Body('sessionId') sessionId: string) {
+		return this.aiChatService.clear(sessionId);
 	}
 }
