@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const features = [
   {
     title: "AI Symptom Triage",
@@ -77,26 +79,27 @@ export default function Home() {
           </div>
 
           <nav className="hidden items-center gap-7 text-sm font-medium text-slate-600 md:flex">
-            {['Home', 'Features', 'How It Works', 'Find Doctors', 'About Us', 'Contact'].map((item) => (
-              <a key={item} href="#" className="transition hover:text-blue-700">
-                {item}
-              </a>
-            ))}
+            <Link href="/" className="transition hover:text-blue-700">
+              Home
+            </Link>
+            <a href="#find-doctor" className="transition hover:text-blue-700">
+              Find Doctors
+            </a>
           </nav>
 
           <div className="flex items-center gap-3 text-sm font-semibold">
-            <a
-              href="#login"
+            <Link
+              href="/login"
               className="rounded-xl border border-slate-200 bg-white px-5 py-2.5 text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-700"
             >
               Login
-            </a>
-            <a
-              href="#signup"
+            </Link>
+            <Link
+              href="/register"
               className="rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-2.5 text-white shadow-lg shadow-blue-200 transition hover:from-blue-700 hover:to-blue-800"
             >
               Sign Up
-            </a>
+            </Link>
           </div>
         </div>
       </header>
@@ -135,16 +138,16 @@ export default function Home() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <a
-                href="http://localhost:8000/patient/login"
+                href="/login"
                 className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-sm font-semibold text-white shadow-xl shadow-blue-200 transition hover:translate-y-[-1px] hover:from-blue-700 hover:to-blue-800"
               >
-                Start Health Assessment →
+                Login to Patient Portal →
               </a>
               <a
-                href="#find-doctor"
+                href="/register"
                 className="rounded-2xl border border-slate-200 bg-white px-6 py-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-blue-200 hover:text-blue-700"
               >
-                Find a Doctor →
+                Create Patient Account →
               </a>
             </div>
 
@@ -306,7 +309,7 @@ export default function Home() {
           </div>
 
           <div className="mt-6 text-center">
-            <a href="#" className="text-sm font-semibold text-blue-700 transition hover:text-blue-800">
+              <a href="/register" className="text-sm font-semibold text-blue-700 transition hover:text-blue-800">
               View All Specialties →
             </a>
           </div>
@@ -322,7 +325,7 @@ export default function Home() {
             </p>
           </div>
           <a
-            href="http://localhost:8000/patient/login"
+            href="/login"
             className="rounded-2xl bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-sm font-semibold text-white shadow-lg shadow-blue-200 transition hover:from-blue-700 hover:to-blue-800"
           >
             Start Health Assessment →
